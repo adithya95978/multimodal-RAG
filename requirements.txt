@@ -1,0 +1,14 @@
+pinecone-client
+transformers
+torch
+Pillow
+PyMuPDF
+google-generativeai
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+python-magic
+passlib[bcrypt]
+python-jose[cryptography]
+boto3
