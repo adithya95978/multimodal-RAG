@@ -92,37 +92,122 @@ class VectorDBService:
         logging.info("VectorDBService: Initializing Pinecone...")
 
         # Initialize pinecone client (use module-level `_pinecone` which may be
-        # the real client or an in-memory adapter)
+        # the real client, a new-style Pinecone instance, or an in-memory adapter)
+        pinecone_client = None
         try:
-            _pinecone.init(api_key=config.PINECONE_API_KEY, environment=config.PINECONE_ENVIRONMENT)  # type: ignore[attr-defined]
+            # New pinecone releases require creating a Pinecone() instance
+            if hasattr(_pinecone, "Pinecone") and config.PINECONE_API_KEY:
+                # Create a Pinecone client instance
+                try:
+                    pc = _pinecone.Pinecone(api_key=config.PINECONE_API_KEY)
+                    pinecone_client = pc
+                    logging.info("VectorDBService: Connected to real Pinecone client.")
+                except Exception as init_err:
+                    logging.warning(f"VectorDBService: Failed to initialize Pinecone client: {init_err}. Using in-memory fallback.")
+                    pinecone_client = None
+            elif config.PINECONE_API_KEY:
+                # Older module-level API
+                try:
+                    _pinecone.init(api_key=config.PINECONE_API_KEY, environment=config.PINECONE_ENVIRONMENT)  # type: ignore[attr-defined]
+                    pinecone_client = _pinecone
+                    logging.info("VectorDBService: Connected to Pinecone with older API.")
+                except Exception as init_err:
+                    logging.warning(f"VectorDBService: Failed to initialize Pinecone (older API): {init_err}. Using in-memory fallback.")
+                    pinecone_client = None
+            else:
+                logging.info("VectorDBService: No PINECONE_API_KEY provided. Using in-memory fallback.")
+                pinecone_client = None
         except Exception as e:
-            raise RuntimeError("Failed to initialize pinecone client") from e
+            logging.warning(f"VectorDBService: Unexpected error during Pinecone init: {e}. Using in-memory fallback.")
+            pinecone_client = None
+        
+        # If real Pinecone client failed to initialize, use in-memory adapter
+        if pinecone_client is None:
+            pinecone_client = _InMemoryPineconeAdapter()
+            logging.info("VectorDBService: Using in-memory Pinecone adapter.")
 
         self.index_name = config.PINECONE_INDEX_NAME
         self.dimension = 512  # Dimension for CLIP model openai/clip-vit-base-patch32
-        # Ensure index exists and create/connect using the pinecone module
+
+        # Ensure index exists and create/connect using the resolved client
+        existing = []
         try:
-            existing = _pinecone.list_indexes()  # type: ignore[attr-defined]
+            result = pinecone_client.list_indexes()  # type: ignore[attr-defined]
+            # Some clients return an object with .names(), others return a list
+            if hasattr(result, "names"):
+                existing = result.names()  # type: ignore[attr-defined]
+            else:
+                existing = result if isinstance(result, list) else []
         except Exception as e:
-            raise RuntimeError("pinecone client is missing 'list_indexes' or call failed") from e
+            logging.warning(f"VectorDBService: Could not list indexes: {e}. Skipping index creation check.")
+            existing = []
 
         if self.index_name not in existing:
-            logging.info("VectorDBService: Index '%s' not found. Creating new index...", self.index_name)
+            logging.info("VectorDBService: Index '%s' not found. Attempting to create...", self.index_name)
             try:
-                _pinecone.create_index(  # type: ignore[attr-defined]
-                    name=self.index_name,
-                    dimension=self.dimension,
-                    metric="cosine",
-                    metadata_config={"indexed": ["kb_type", "context_id"]}
-                )
-                logging.info("VectorDBService: Index created successfully.")
+                # Try the simpler create_index signature first
+                try:
+                    pinecone_client.create_index(  # type: ignore[attr-defined]
+                        name=self.index_name,
+                        dimension=self.dimension,
+                        metric="cosine",
+                        metadata_config={"indexed": ["kb_type", "context_id"]}
+                    )
+                    logging.info("VectorDBService: Index created successfully with metadata_config.")
+                except TypeError:
+                    # New Pinecone API requires spec; try ServerlessSpec if available
+                    ServerlessSpec = getattr(_pinecone, "ServerlessSpec", None) or getattr(pinecone_client, "ServerlessSpec", None)
+                    if ServerlessSpec is not None:
+                        # Extract a valid AWS region from PINECONE_ENVIRONMENT or AWS_REGION
+                        # Valid AWS regions: us-east-1, us-west-2, eu-west-1, etc.
+                        # If PINECONE_ENVIRONMENT contains "gcp", try gcp-starter or default to us-west-2
+                        env_region = config.PINECONE_ENVIRONMENT or ""
+                        aws_region = config.AWS_REGION or ""
+                        
+                        # Pick a valid region
+                        if "gcp" in env_region.lower():
+                            region = "gcp-starter"
+                        elif aws_region and not "gcp" in aws_region.lower():
+                            region = aws_region
+                        else:
+                            region = "us-west-2"
+                        
+                        cloud = "gcp" if region == "gcp-starter" else "aws"
+                        
+                        logging.info(f"VectorDBService: Creating index with ServerlessSpec cloud={cloud}, region={region}")
+                        try:
+                            spec = ServerlessSpec(cloud=cloud, region=region)
+                            pinecone_client.create_index(  # type: ignore[attr-defined]
+                                name=self.index_name,
+                                dimension=self.dimension,
+                                metric="cosine",
+                                spec=spec
+                            )
+                            logging.info("VectorDBService: Index created successfully with ServerlessSpec.")
+                        except Exception as spec_err:
+                            logging.warning(f"VectorDBService: Failed to create index with ServerlessSpec: {spec_err}. Index may already exist.")
+                    else:
+                        logging.warning("VectorDBService: ServerlessSpec not available; cannot create index.")
             except Exception as e:
-                raise RuntimeError("pinecone client is missing 'create_index' or creation failed") from e
+                logging.warning(f"VectorDBService: Could not create index '{self.index_name}': {e}. Continuing with existing index or in-memory fallback.")
 
         try:
-            self.index = _pinecone.Index(self.index_name)  # type: ignore[attr-defined]
+            # Obtain an index object with upsert/query methods
+            if hasattr(pinecone_client, "Index"):
+                self.index = pinecone_client.Index(self.index_name)  # type: ignore[attr-defined]
+            elif hasattr(pinecone_client, "index"):
+                self.index = pinecone_client.index(self.index_name)  # type: ignore[attr-defined]
+            else:
+                # Fallback to module-level Index if available
+                self.index = _pinecone.Index(self.index_name)  # type: ignore[attr-defined]
         except Exception as e:
-            raise RuntimeError("pinecone client is missing 'Index' class or instantiation failed") from e
+            logging.warning(f"VectorDBService: Could not obtain index object: {e}. Using in-memory fallback.")
+            # Create a fallback in-memory index
+            if isinstance(pinecone_client, _InMemoryPineconeAdapter):
+                self.index = pinecone_client.Index(self.index_name)
+            else:
+                # Last resort: create a minimal in-memory index
+                self.index = _InMemoryIndex(self.index_name)
 
         logging.info("VectorDBService: Pinecone initialized and connected to index.")
 

@@ -1,4 +1,4 @@
-pinecone-client
+pinecone
 transformers
 torch
 Pillow
@@ -7,6 +7,7 @@ google-generativeai
 fastapi
 uvicorn[standard]
 pydantic
+pydantic-settings
 python-dotenv
 python-magic
 passlib[bcrypt]

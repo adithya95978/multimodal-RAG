@@ -1,5 +1,5 @@
-from pydantic import BaseSettings
-from datetime import timedelta
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
 
 class Settings(BaseSettings):
     """
@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """
     # Pinecone settings
     PINECONE_API_KEY: str
-    PINECONE_ENVIRONMENT: str
+    PINECONE_ENVIRONMENT: str | None = None
     PINECONE_INDEX_NAME: str = "multi-rag-index"
 
     # Google Generative AI settings
@@ -32,4 +32,8 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 # Create a single, reusable instance of the settings
+# Load values from a local .env file (if present) into the environment
+load_dotenv()
+
+# Instantiate settings; Pydantic will read values from environment/.env
 settings = Settings()

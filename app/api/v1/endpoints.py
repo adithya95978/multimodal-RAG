@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from app.core.config import Settings, settings
-from app.services.embedding_service import embedding_service, EmbeddingService
-from app.services.vector_db_service import vector_db_service, VectorDBService, KBType
-from app.services.document_service import document_service, DocumentService
+from app.services.embedding import embedding_service, EmbeddingService
+from app.services.vector_db import vector_db_service, VectorDBService, KBType
+from app.services.parser import document_service, DocumentService
 from app.services.storage_service import storage_service, StorageService
 from app.services.llm_gen import generative_service, GenerativeService
 from app.services.rag_pipeline import RAGPipelineService
 from app.api.v1.auth import get_current_active_user
-from app import schemas
+from app.api.v1 import schemas
 from PIL import Image
 import hashlib
 import io
@@ -16,7 +16,7 @@ router = APIRouter()
 
 @router.get("/", response_model=schemas.HealthCheck)
 def home(app_settings: Settings = Depends(lambda: settings)):
-    return {"message": "Hello, World!", "google_api_key_loaded": bool(app_settings.GOOGLE_API_KEY)}
+    return {"message": "I am the medical chatbot!.how can i help you?", "google_api_key_loaded": bool(app_settings.GOOGLE_API_KEY)}
 
 @router.post("/embeddings/", response_model=schemas.EmbeddingResponse)
 async def create_embedding(
@@ -55,7 +55,7 @@ async def create_embedding(
             source_id = f"s3://{store_service.bucket_name}/{object_name}"
             
             if not store_service.upload_file(io.BytesIO(text.encode('utf-8')), object_name):
-                 raise HTTPException(status_code=500, detail="Failed to upload text to cloud storage.")
+                raise HTTPException(status_code=500, detail="Failed to upload text to cloud storage.")
 
             embedding = embed_service.create_text_embedding(text)
         elif image:
@@ -74,7 +74,7 @@ async def create_embedding(
         vector_id = db_service.upsert(embedding, kb_type, source_type, source_id, context_id)
         return {"status": "success", "vector_id": vector_id, "kb_type": kb_type, "context_id": context_id}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e
 
 @router.post("/documents/extract/", response_model=schemas.ExtractionResponse)
 async def extract_from_document(
@@ -94,7 +94,7 @@ async def extract_from_document(
         text, images = doc_service.extract_from_pdf(file_stream)
         return {"filename": file.filename, "text_length": len(text), "image_count": len(images)}
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to process PDF: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to process PDF: {e}") from e
 
 @router.post("/query/", response_model=schemas.QueryResponse)
 async def perform_query(
@@ -126,4 +126,4 @@ async def perform_query(
         result = pipeline.run_pipeline(query, kb_type, context_id)
         return result
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)) from e

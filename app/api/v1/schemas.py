@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
-from app.services.vector_db_service import KBType
+from app.services.vector_db import KBType
 
 # --- User and Token Schemas ---
 
@@ -50,4 +50,4 @@ class QueryResponse(BaseModel):
 
     class Config:
         # This allows the model to be created from arbitrary class instances
-        orm_mode = True
+        from_attributes = True
