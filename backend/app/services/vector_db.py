@@ -1,5 +1,5 @@
 import logging
-from app.core.config import settings, Settings
+from backend.app.core.config import settings, Settings
 from enum import Enum
 import uuid
 from typing import Dict, List, Any

@@ -13,3 +13,4 @@ python-magic
 passlib[bcrypt]
 python-jose[cryptography]
 boto3
+passlib

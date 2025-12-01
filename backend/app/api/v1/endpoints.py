@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
-from app.core.config import Settings, settings
-from app.services.embedding import embedding_service, EmbeddingService
-from app.services.vector_db import vector_db_service, VectorDBService, KBType
-from app.services.parser import document_service, DocumentService
-from app.services.storage_service import storage_service, StorageService
-from app.services.llm_gen import generative_service, GenerativeService
-from app.services.rag_pipeline import RAGPipelineService
-from app.api.v1.auth import get_current_active_user
-from app.api.v1 import schemas
+from backend.app.core.config import Settings, settings
+from backend.app.services.embedding import embedding_service, EmbeddingService
+from backend.app.services.vector_db import vector_db_service, VectorDBService, KBType
+from backend.app.services.parser import document_service, DocumentService
+from backend.app.services.storage_service import storage_service, StorageService
+from backend.app.services.llm_gen import generative_service, GenerativeService
+from backend.app.services.rag_pipeline import RAGPipelineService
+from backend.app.api.v1.auth import get_current_active_user
+from backend.app.api.v1 import schemas
 from PIL import Image
 import hashlib
 import io
@@ -68,6 +68,9 @@ async def create_embedding(
             
             if not store_service.upload_file(file_stream, object_name):
                 raise HTTPException(status_code=500, detail="Failed to upload image to cloud storage.")
+            
+            # Reset the stream's position to the beginning before reading it again for PIL
+            file_stream.seek(0)
             pil_image = Image.open(file_stream)
             embedding = embed_service.create_image_embedding(pil_image)
 

@@ -8,10 +8,10 @@ from pathlib import Path
 # Add the project root to the Python path to allow importing app modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from app.services.parser import document_service
-from app.services.embedding import embedding_service
-from app.services.storage_service import storage_service
-from app.services.vector_db import vector_db_service, KBType
+from backend.app.services.parser import document_service
+from backend.app.services.embedding import embedding_service
+from backend.app.services.storage_service import storage_service
+from backend.app.services.vector_db import vector_db_service, KBType
 
 def process_pdf(file_path: Path):
     """

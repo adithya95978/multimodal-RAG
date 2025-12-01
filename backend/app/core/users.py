@@ -1,4 +1,4 @@
-from app.core.security import get_password_hash
+from backend.app.core.security import get_password_hash
 
 # In-memory user database for demonstration
 # In a real application, this would be a proper database (SQL, NoSQL, etc.)

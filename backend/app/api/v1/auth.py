@@ -3,10 +3,10 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from datetime import timedelta
 
-from app.api.v1 import schemas
-from app.core import security
-from app.core.config import settings
-from app.db import users
+from backend.app.api.v1 import schemas
+from backend.app.core import security
+from backend.app.core.config import settings
+from backend.app.db import users
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
-from app.core.config import settings, Settings
+from backend.app.core.config import settings, Settings
 import io
 import logging
 

@@ -1,15 +1,15 @@
 import time
 import logging
 from fastapi import FastAPI, Request
-from app.api.v1 import endpoints
-from app.api.v1 import auth
+from backend.app.api.v1 import endpoints
+from backend.app.api.v1 import auth
 
 # Import service instances to ensure they are initialized on startup
-from app.services.embedding import embedding_service
-from app.services.vector_db import vector_db_service
-from app.services.storage_service import storage_service
-from app.services.llm_gen import generative_service
-from app.services.parser import document_service
+from backend.app.services.embedding import embedding_service
+from backend.app.services.vector_db import vector_db_service
+from backend.app.services.storage_service import storage_service
+from backend.app.services.llm_gen import generative_service
+from backend.app.services.parser import document_service
 
 # Reference the instances so static analysis doesn't flag them as unused
 _services = (embedding_service, vector_db_service, storage_service, generative_service, document_service)

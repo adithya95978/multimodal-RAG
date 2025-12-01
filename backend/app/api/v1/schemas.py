@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
-from app.services.vector_db import KBType
+from backend.app.services.vector_db import KBType
 
 # --- User and Token Schemas ---
 

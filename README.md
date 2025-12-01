@@ -1,21 +1,25 @@
-# Multimodal RAG API
+# Multimodal RAG API and Frontend
 
-This project implements a **Multimodal Retrieval-Augmented Generation (RAG)** API using **FastAPI**. It supports ingesting and querying both **text** and **image** data by leveraging **CLIP embeddings**, a vector database (**Pinecone** or in-memory fallback), and a multimodal Large Language Model (**Google Gemini**) for generative answers.
+This project implements a full-stack **Multimodal Retrieval-Augmented Generation (RAG)** application.
 
-The application is structured to handle two types of knowledge bases:
+*   **Backend:** A **FastAPI** application that supports ingesting and querying both **text** and **image** data. It uses **CLIP embeddings**, a vector database (**Pinecone** or in-memory fallback), and a multimodal Large Language Model (**Google Gemini**) for generative answers.
+*   **Frontend:** A **React** application that provides a user interface to interact with the backend API. Users can upload documents, run queries, and view the results.
 
-  * **GKB (General Knowledge Base):** Publicly accessible data.
-  * **SKB (Specific Knowledge Base):** User-specific and isolated data, keyed by the authenticated user's email.
+The backend is structured to handle two types of knowledge bases:
+
+*   **GKB (General Knowledge Base):** Publicly accessible data.
+*   **SKB (Specific Knowledge Base):** User-specific and isolated data, keyed by the authenticated user's email.
 
 -----
 
 ## 🚀 Key Features
 
-  * **Multimodal Embeddings:** Uses the **CLIP** model (`openai/clip-vit-base-patch32`) to generate vector representations for both text and images.
-  * **RAG Pipeline:** Orchestrates the flow from query embedding, vector search, content retrieval from S3, and final generation using **Gemini**.
-  * **Document Processing:** Includes a service to extract **text and images from PDF** documents using PyMuPDF.
-  * **Scalable Storage:** Uses **AWS S3** for persistent storage of original text and image files.
-  * **Authentication:** Secured with **JWT** using OAuth2 Password Flow.
+*   **Multimodal Embeddings:** Uses the **CLIP** model (`openai/clip-vit-base-patch32`) to generate vector representations for both text and images.
+*   **RAG Pipeline:** Orchestrates the flow from query embedding, vector search, content retrieval from S3, and final generation using **Gemini**.
+*   **Document Processing:** Includes a service to extract **text and images from PDF** documents using PyMuPDF.
+*   **Scalable Storage:** Uses **AWS S3** for persistent storage of original text and image files.
+*   **Authentication:** Secured with **JWT** using OAuth2 Password Flow.
+*   **React Frontend:** A user-friendly interface for interacting with the RAG pipeline.
 
 -----
 
@@ -25,74 +29,64 @@ The codebase is organized as follows:
 
 ```
 .
-├── .env                 # Application configuration (not committed)
-├── .gitignore
 ├── README.md
-├── requirements.txt     # Python dependencies
-└── app/
-    ├── main.py          # FastAPI application entry point
-    ├── api/
-    │   └── v1/
-    │       ├── auth.py      # Authentication (login, user details)
-    │       ├── endpoints.py # Core API (query, embeddings, documents)
-    │       └── schemas.py   # Pydantic data models
-    ├── core/
-    │   ├── config.py    # Application settings
-    │   └── security.py  # Password hashing and JWT utilities
-    ├── db/
-    │   ├── __init__.py
-    │   └── users.py     # Mock user database
-    ├── scripts/
-    │   └── bulk_ingest_gkb.py # CLI script for GKB ingestion
-    └── services/
-        ├── embedding.py      # CLIP embedding service
-        ├── llm_gen.py        # Gemini generative service
-        ├── parser.py         # PDF content extraction
-        ├── rag_pipeline.py   # RAG workflow orchestrator
-        ├── storage_service.py# AWS S3 file storage
-        └── vector_db.py      # Pinecone/In-memory vector database
+├── requirements.txt      # Python dependencies for the backend
+├── backend/
+│   └── app/              # FastAPI backend source code
+│       ├── main.py
+│       ├── api/
+│       ├── core/
+│       ├── db/
+│       ├── scripts/
+│       └── services/
+└── frontend/
+    ├── package.json      # Node.js dependencies for the frontend
+    └── src/              # React frontend source code
+        ├── components/
+        ├── services/
+        └── App.jsx
 ```
 
 -----
 
-## ⚙️ Setup and Installation
+## ⚙️ Local Development Setup
 
 ### Prerequisites
 
-  * Python 3.9+
-  * Access to:
-      * **Google Gemini API** (for `GOOGLE_API_KEY`)
-      * **Pinecone** (optional, an in-memory mock is used if not configured)
-      * **AWS S3** (optional, for storage)
+*   Python 3.9+
+*   Node.js and npm (or yarn)
+*   Access to:
+    *   **Google Gemini API** (for `GOOGLE_API_KEY`)
+    *   **Pinecone** (optional, an in-memory mock is used if not configured)
+    *   **AWS S3** (optional, for storage)
 
-### Installation Steps
+### 1. Clone the Repository
 
-1.  **Clone the repository:**
+```bash
+git clone https://github.com/adithya95978/multimodal-RAG.git
+cd multimodal-RAG
+```
 
+### 2. Backend Setup
+
+1.  **Create and activate a virtual environment:**
     ```bash
-    git clone <repository-url>
-    cd multimodal-RAG
-    ```
-
-2.  **Create and activate a virtual environment:**
-
-    ```bash
+    cd backend
     python -m venv venv
-    source venv/bin/activate  # On Linux/macOS
-    # .\venv\Scripts\activate # On Windows
+    # On Linux/macOS
+    source venv/bin/activate
+    # On Windows
+    .\venv\Scripts\activate
     ```
 
-3.  **Install dependencies:**
-
+2.  **Install Python dependencies:**
     ```bash
-    pip install -r requirements.txt
+    pip install -r ../requirements.txt
     ```
 
-    *The dependencies include `pinecone`, `transformers`, `torch`, `google-generativeai`, `fastapi`, `pydantic-settings`, and `boto3`*.
+3.  **Configure Environment Variables**
 
-4.  **Configure Environment Variables**
-
-    Create a file named `.env` in the root directory and populate it with your credentials. Refer to `app/core/config.py` for required variables:
+    Create a file named `.env` in the `backend` directory (`multimodal-RAG/backend/.env`) and populate it with your credentials. Refer to `backend/app/core/config.py` for required variables:
 
     ```ini
     # .env file
@@ -115,19 +109,41 @@ The codebase is organized as follows:
     SECRET_KEY="a_very_secret_key_that_should_be_changed"
     ```
 
-5.  **Run the application:**
+### 3. Frontend Setup
 
+1.  **Navigate to the frontend directory:**
+    ```bash
+    cd frontend
+    ```
+
+2.  **Install Node.js dependencies:**
+    ```bash
+    npm install
+    ```
+
+### 4. Running the Application
+
+1.  **Run the Backend Server:**
+
+    From the `backend` directory (with the virtual environment activated):
     ```bash
     uvicorn app.main:app --reload
     ```
+    The backend API will be available at `http://127.0.0.1:8000`.
 
-    The API will be available at `http://127.0.0.1:8000`.
+2.  **Run the Frontend Development Server:**
+
+    In a new terminal, from the `frontend` directory:
+    ```bash
+    npm run dev
+    ```
+    The frontend application will be available at `http://127.0.0.1:5173`.
 
 -----
 
 ## 🛠 Usage and Endpoints
 
-The API documentation (Swagger UI) is available at `http://127.0.0.1:8000/docs`.
+The API documentation (Swagger UI) is available at `http://127.0.0.1:8000/docs` when the backend is running.
 
 ### Authentication
 
@@ -153,7 +169,7 @@ The `bulk_ingest_gkb.py` script is a command-line utility for mass ingestion of 
 
 1.  **Run the script:**
     ```bash
-    python app/scripts/bulk_ingest_gkb.py <path_to_pdf_or_directory>
+    python backend/app/scripts/bulk_ingest_gkb.py <path_to_pdf_or_directory>
     ```
 2.  The script will:
       * Extract text and images from each PDF.

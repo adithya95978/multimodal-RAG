@@ -1,5 +1,5 @@
 import google.generativeai as genai
-from app.core.config import settings, Settings
+from backend.app.core.config import settings, Settings
 import logging
 from typing import List, Dict, Any
 
